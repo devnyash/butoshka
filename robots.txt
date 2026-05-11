@@ -1,0 +1,51 @@
+# Основные правила для всех роботов
+User-agent: *
+Allow: /
+Allow: /index.php$
+Allow: /korzina.php$
+Allow: /avtoris.php$
+Allow: /regist.php$
+Allow: /my_orders.php$
+
+# Запрещаем служебные файлы
+Disallow: /*.txt$
+Disallow: /*.log$
+Disallow: /*.sql$
+Disallow: /admin.php$
+Disallow: /avt.php$
+Disallow: /logout.php$
+Disallow: /reg.php$
+Disallow: /zak.php$
+Disallow: /kor.php$
+Disallow: /tovar_uprav.php$
+Disallow: /orders.php$
+Disallow: /db.php$
+
+# Запрещаем папки с ресурсами
+Disallow: /css/
+Disallow: /img/
+Disallow: /_vti_*
+
+# Яндекс
+User-agent: Yandex
+Allow: /
+Allow: /index.php$
+Allow: /korzina.php$
+Allow: /avtoris.php$
+Allow: /regist.php$
+Allow: /my_orders.php$
+
+# Google
+User-agent: Googlebot
+Allow: /
+Allow: /index.php$
+Allow: /korzina.php$
+Allow: /avtoris.php$
+Allow: /regist.php$
+Allow: /my_orders.php$
+
+# Основное зеркало сайта
+Host: butoshka.psychoware.website
+
+# Карта сайта
+Sitemap: https://butoshka.psychoware.website/sitemap.xml
