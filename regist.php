@@ -34,8 +34,7 @@
                         unset($_SESSION['error_message']);
                     ?>
                 </div>
-            <?php endif; ?>
-            
+            <?php endif; ?>hgbvyu
             <input type="text" placeholder="Введите логин" name="login" required>
             <input type="text" placeholder="Введите номер телефона" name="phone" required>
             <input type="email" placeholder="Введите почту" name="email" required>
