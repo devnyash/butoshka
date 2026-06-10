@@ -125,7 +125,7 @@ if ($action == 'edit' && isset($_GET['id']) && !isset($_POST['submit_edit'])) {
 }
 
 $products = [];
-$result = $conn->query("SELECT id, name, description, price, category, image, image_mime, IF(image_data IS NOT NULL, 1, 0) as has_image FROM products ORDER BY id DESC");
+$result = $conn->query("SELECT id, name, description, price, category, IF(image_data IS NOT NULL, 1, 0) as has_image FROM products ORDER BY id DESC");
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         $products[] = $row;
@@ -678,13 +678,10 @@ if (isset($_GET['success'])) {
                                 <div class="form-group">
                                     <label>Текущее фото:</label>
                                     <div class="current-image">
-                                        <?php 
-                                        $has_data = !empty($product['image_data']);
-                                        $img_src = $has_data ? "img_out.php?id=" . $product['id'] : "img/placeholder.jpg";
-                                        ?>
-                                        <img src="<?= $img_src ?>" 
+                                        <?php $has_image = !empty($product['image_data']); ?>
+                                        <img src="img_out.php?id=<?= $product['id'] ?>" 
                                              alt="<?= htmlspecialchars($product['name']) ?>">
-                                        <span><?= $has_data ? 'в БД' : htmlspecialchars($product['image'] ?? '') ?></span>
+                                        <span><?= $has_image ? 'в БД' : 'нет фото' ?></span>
                                     </div>
                                 </div>
                                 
@@ -742,11 +739,7 @@ if (isset($_GET['success'])) {
                                         <tr>
                                             <td><strong>#<?= $item['id'] ?></strong></td>
                                             <td>
-                                                <?php 
-                                                $has_data = !empty($item['has_image']);
-                                                $img_src = $has_data ? "img_out.php?id=" . $item['id'] : (($item['image'] ?? false) ? "img/" . htmlspecialchars($item['image']) : "img/placeholder.jpg");
-                                                ?>
-                                                <img src="<?= $img_src ?>" 
+                                                <img src="img_out.php?id=<?= $item['id'] ?>" 
                                                      alt="<?= htmlspecialchars($item['name']) ?>"
                                                      class="product-image">
                                             </td>
