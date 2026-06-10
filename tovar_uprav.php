@@ -55,13 +55,14 @@ if ($action == 'add' && isset($_POST['submit_add'])) {
             error_log("ADD PRODUCT: пробуем загрузить изображение");
             $img = saveImageToDB($_FILES['image']);
             if ($img) {
-                $null = null;
                 $stmt = $conn->prepare("UPDATE products SET image_data = ?, image_mime = ? WHERE id = ?");
-                $stmt->bind_param('bsi', $null, $img['mime'], $product_id);
-                $stmt->send_long_data(0, $img['data']);
-                $stmt->execute();
+                $stmt->bind_param('ssi', $img['data'], $img['mime'], $product_id);
+                if ($stmt->execute()) {
+                    error_log("ADD PRODUCT: изображение сохранено в БД");
+                } else {
+                    error_log("ADD PRODUCT: ошибка БД: " . $stmt->error);
+                }
                 $stmt->close();
-                error_log("ADD PRODUCT: изображение сохранено в БД");
             } else {
                 error_log("ADD PRODUCT: загрузка изображения не удалась");
             }
@@ -89,10 +90,8 @@ if ($action == 'edit' && isset($_POST['submit_edit'])) {
         if (isset($_FILES['image']) && $_FILES['image']['error'] == 0 && $_FILES['image']['size'] > 0) {
             $img = saveImageToDB($_FILES['image']);
             if ($img) {
-                $null = null;
                 $stmt = $conn->prepare("UPDATE products SET image_data = ?, image_mime = ? WHERE id = ?");
-                $stmt->bind_param('bsi', $null, $img['mime'], $id);
-                $stmt->send_long_data(0, $img['data']);
+                $stmt->bind_param('ssi', $img['data'], $img['mime'], $id);
                 $stmt->execute();
                 $stmt->close();
             }
