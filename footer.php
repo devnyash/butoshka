@@ -15,11 +15,11 @@
                 <h4>Навигация</h4>
                 <a href="index.php">Главная</a>
                 <a href="korzina.php">Корзина</a>
-                <a href="my_orders.php">Мои заказы</a>
+                <a href="profile.php?tab=orders">Мои заказы</a>
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2026 BUTOSHKA. Все права защищены.</p>
+            <p>2026 BUTOSHKA. Все права защищены.</p>
         </div>
     </div>
 </footer>

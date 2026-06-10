@@ -4,7 +4,7 @@ require_once 'kor.php';
 require_once 'db.php';
 
 if (!isset($_SESSION['user_id'])) {
-    header('Location: avtoris.php');
+    header('Location: index.php?auth=login');
     exit;
 }
 

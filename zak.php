@@ -4,21 +4,31 @@ require_once('kor.php');
 session_start();
 
 if (!isset($_SESSION['user_id'])) {
-    header('Location: avtoris.php');
+    if (($_POST['ajax'] ?? '')) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Необходимо авторизоваться']);
+        exit;
+    }
+    header('Location: index.php?auth=login');
     exit;
 }
 
 if (getCartCount() == 0) {
+    if (($_POST['ajax'] ?? '')) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Корзина пуста']);
+        exit;
+    }
     header('Location: korzina.php');
     exit;
 }
 
 $user_id = $_SESSION['user_id'];
-$fio = $_POST['fio'];
-$phone = $_POST['phone'];
-$address = $_POST['address'];
-$delivery_date = $_POST['delivery_date'];
-$card_number = $_POST['card_number'];
+$fio = $_POST['fio'] ?? '';
+$phone = $_POST['phone'] ?? '';
+$address = $_POST['address'] ?? '';
+$delivery_date = $_POST['delivery_date'] ?? '';
+$card_number = $_POST['card_number'] ?? '';
 $total = getCartTotal();
 $items = getCartItems();
 
@@ -46,6 +56,12 @@ try {
     $conn->commit();
 
     $_SESSION['cart'] = [];
+
+    if (($_POST['ajax'] ?? '')) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true]);
+        exit;
+    }
 
     echo "<!DOCTYPE html>
     <html>
@@ -106,6 +122,11 @@ try {
     
 } catch (Exception $e) {
     $conn->rollback();
+    if (($_POST['ajax'] ?? '')) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Ошибка при оформлении заказа: ' . $e->getMessage()]);
+        exit;
+    }
     echo "Ошибка при оформлении заказа: " . $e->getMessage();
     echo "<br><a href='zakaz.php'>Вернуться</a>";
 }

@@ -1,47 +1,73 @@
 <?php
-require_once ('db.php');
+require_once 'db.php';
+require_once 'auth_helpers.php';
 session_start();
 
-$login = $_POST['login']; 
-$phone = $_POST['phone'];
-$email = $_POST['email'];
-$pass = $_POST['pass'];
-$reppass = $_POST['reppass'];
+$login = trim($_POST['login'] ?? '');
+$phone = trim($_POST['phone'] ?? '');
+$email = trim($_POST['email'] ?? '');
+$pass = $_POST['pass'] ?? '';
+$reppass = $_POST['reppass'] ?? '';
 
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    $_SESSION['error_message'] = "Неверный формат email";
-    header('Location: regist.php');
-    exit;
+$error = '';
+
+if (empty($login) || empty($phone) || empty($email) || empty($pass) || empty($reppass)) {
+    $error = "Заполните все поля";
+} elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    $error = "Неверный формат email";
+} elseif (mb_strlen($login) < 3) {
+    $error = "Логин должен содержать минимум 3 символа";
+} elseif ($pass !== $reppass) {
+    $error = "Пароли не совпадают";
+} elseif (!isPasswordStrong($pass)) {
+    $error = "Пароль должен быть не короче 8 символов и содержать буквы и цифры";
 }
 
-if(empty($login) || empty($phone) || empty($email) || empty($pass) || empty($reppass)){
-    $_SESSION['error_message'] = "Заполните все поля";
-    header('Location: regist.php');
-    exit;
-} else {
-    if($pass != $reppass){
-        $_SESSION['error_message'] = "Пароли не совпадают";
-        header('Location: regist.php');
-        exit;
-    } else {
-        $check_sql = "SELECT id FROM users WHERE login = '$login' OR email = '$email'";
-        $check_result = $conn->query($check_sql);
-        if($check_result->num_rows > 0){
-            $_SESSION['error_message'] = "Пользователь с таким логином или email уже существует";
-            header('Location: regist.php');
-            exit;
-        } else {
-            $sql = "INSERT INTO `users` (`login`, `phone`, `email`, `pass`, `role`) VALUES ('$login', '$phone', '$email', '$pass', 'user')";
-            if($conn->query($sql) === TRUE){
-                $_SESSION['success_message'] = "Регистрация успешна! Теперь вы можете войти";
-                header('Location: avtoris.php');
-                exit;
-            } else {
-                $_SESSION['error_message'] = "Ошибка: " . $conn->error;
-                header('Location: regist.php');
-                exit;
-            }
-        }
+if (!$error) {
+    $checkStmt = $conn->prepare("SELECT id FROM users WHERE login = ? OR email = ?");
+    $checkStmt->bind_param('ss', $login, $email);
+    $checkStmt->execute();
+    $checkResult = $checkStmt->get_result();
+
+    if ($checkResult->num_rows > 0) {
+        $error = "Пользователь с таким логином или email уже существует";
     }
 }
-?>
+
+if ($error) {
+    if ($_POST['ajax'] ?? '') {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => $error]);
+        exit;
+    }
+    $_SESSION['error_message'] = $error;
+    header('Location: regist.php');
+    exit;
+}
+
+$passwordHash = password_hash($pass, PASSWORD_DEFAULT);
+$insertStmt = $conn->prepare(
+    "INSERT INTO users (login, phone, email, pass, role) VALUES (?, ?, ?, ?, 'user')"
+);
+$insertStmt->bind_param('ssss', $login, $phone, $email, $passwordHash);
+
+if ($insertStmt->execute()) {
+    if ($_POST['ajax'] ?? '') {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'message' => 'Регистрация успешна! Теперь вы можете войти.']);
+        exit;
+    }
+    $_SESSION['success_message'] = "Регистрация успешна! Теперь вы можете войти";
+    header('Location: index.php?auth=login');
+    exit;
+}
+
+$error = "Ошибка: " . $conn->error;
+if ($_POST['ajax'] ?? '') {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => $error]);
+    exit;
+}
+$_SESSION['error_message'] = $error;
+header('Location: regist.php');
+exit;

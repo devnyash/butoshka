@@ -16,7 +16,11 @@ body {
   flex-direction: column;
   font-family: Arial, Helvetica, sans-serif;
   min-height: 100vh;
-  padding-top: 80px;
+}
+
+main {
+  flex: 1 0 auto;
+  width: 100%;
 }
 form {
   display: flex;
@@ -25,7 +29,7 @@ form {
   margin: 30px auto;
   background: #6779649c;
   border-radius: 10px;
-  max-width: 300px;
+  max-width: 400px;
 }
 h2 {
   color: #2e2a21;

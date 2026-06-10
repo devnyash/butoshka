@@ -3,7 +3,7 @@ session_start();
 require_once('db.php');
 
 if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
-    header('Location: avtoris.php');
+    header('Location: index.php?auth=login');
     exit;
 }
 
@@ -56,6 +56,7 @@ $pending_reviews = $conn->query("SELECT COUNT(*) as count FROM reviews WHERE sta
             color: white;
             padding: 20px;
             border-radius: 10px;
+            margin-top: 80px;
             margin-bottom: 20px;
             display: flex;
             justify-content: space-between;

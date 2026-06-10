@@ -13,11 +13,13 @@
             margin-bottom: 15px;
             text-align: center;
         }
+
         .alert-error {
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
+
         .alert-success {
             background: #d4edda;
             color: #155724;
@@ -50,8 +52,8 @@
                 </div>
             <?php endif; ?>
             
-            <input type="text" placeholder="Введите логин" name="login" required>
-            <input type="password" placeholder="Введите пароль" name="pass" required>
+            <input type="text" placeholder="Введите логин" name="login" required autocomplete="username">
+            <input type="password" placeholder="Введите пароль" name="pass" required autocomplete="current-password">
             <button type="submit">Войти</button>
             <p>
                Еще нет аккаунта? <a href="regist.php">Зарегистрироваться</a>

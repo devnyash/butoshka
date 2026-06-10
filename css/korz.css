@@ -1,6 +1,6 @@
 .shopping-cart {
     max-width: 1000px;
-    margin: 40px auto;
+    margin: 80px auto;
     background: #FFFFFF;
     border-radius: 10px;
     box-shadow: 1px 2px 10px rgba(0,0,0,0.1);
@@ -159,15 +159,15 @@
 }
 
 .total-amount {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 600;
     color: #2e2a21;
 }
 
 .total-amount span {
     color: #677964;
-    font-size: 26px;
-    font-weight: 700;
+    font-size: 20px;
+    font-weight: 00;
     margin-left: 10px;
 }
 
@@ -175,6 +175,7 @@
     background: #677964;
     color: white;
     padding: 14px 40px;
+    margin-left: 10px;
     border: none;
     border-radius: 8px;
     font-size: 18px;
@@ -267,7 +268,6 @@
     }
     
     .checkout-btn {
-        width: 100%;
         text-align: center;
     }
 }

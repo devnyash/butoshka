@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,10 +13,18 @@
             margin-bottom: 15px;
             text-align: center;
         }
+
         .alert-error {
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
+        }
+
+        .password-hint {
+            color: #2e2a21;
+            text-align: center;
+            font-size: 13px;
+            margin: 6px 8px 0;
         }
     </style>
 </head>
@@ -34,12 +42,13 @@
                         unset($_SESSION['error_message']);
                     ?>
                 </div>
-            <?php endif; ?>hgbvyu
-            <input type="text" placeholder="Введите логин" name="login" required>
-            <input type="text" placeholder="Введите номер телефона" name="phone" required>
-            <input type="email" placeholder="Введите почту" name="email" required>
-            <input type="password" placeholder="Введите пароль" name="pass" required>
-            <input type="password" placeholder="Повторите пароль" name="reppass" required>
+            <?php endif; ?>
+            <input type="text" placeholder="Введите логин" name="login" required minlength="3" autocomplete="username">
+            <input type="text" placeholder="Введите номер телефона" name="phone" required autocomplete="tel">
+            <input type="email" placeholder="Введите почту" name="email" required autocomplete="email">
+            <input type="password" placeholder="Введите пароль" name="pass" required minlength="8" autocomplete="new-password">
+            <input type="password" placeholder="Повторите пароль" name="reppass" required minlength="8" autocomplete="new-password">
+            <div class="password-hint">Пароль: минимум 8 символов, буквы и цифры</div>
             <button type="submit">Зарегистрироваться</button>
             <p>
                 Уже есть аккаунт? <a href="avtoris.php">Авторизоваться</a>

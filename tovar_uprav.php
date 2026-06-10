@@ -3,7 +3,7 @@ require_once('db.php');
 session_start();
 
 if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
-    header('Location: avtoris.php');
+    header('Location: index.php?auth=login');
     exit;
 }
 
@@ -11,46 +11,41 @@ $action = isset($_GET['action']) ? $_GET['action'] : 'list';
 $message = '';
 $error = '';
 
-function uploadImage($file, $product_id) {
-    $target_dir = "img/";
-    
-    if (!file_exists($target_dir)) {
-        mkdir($target_dir, 0777, true);
-    }
-    
-    $imageFileType = strtolower(pathinfo($file["name"], PATHINFO_EXTENSION));
+function saveImageToDB($file) {
     $allowed_types = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-    
+    $imageFileType = strtolower(pathinfo($file["name"], PATHINFO_EXTENSION));
+
     if (!in_array($imageFileType, $allowed_types)) {
-        error_log("uploadImage: неподдерживаемый тип файла: " . $imageFileType);
         return false;
     }
-    
-    $new_filename = $product_id . "." . $imageFileType;
-    $target_file = $target_dir . $new_filename;
-    
-    error_log("uploadImage: пробуем загрузить в " . $target_file);
-    error_log("uploadImage: tmp_name = " . $file["tmp_name"]);
-    error_log("uploadImage: size = " . $file["size"]);
-    
-    if (move_uploaded_file($file["tmp_name"], $target_file)) {
-        error_log("uploadImage: успешно загружено");
-        return $new_filename;
+
+    $data = file_get_contents($file["tmp_name"]);
+    if ($data === false) {
+        return false;
     }
-    
-    error_log("uploadImage: ошибка загрузки, код ошибки = " . $file["error"]);
-    return false;
+
+    $mime_map = [
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+    ];
+    $mime = $mime_map[$imageFileType] ?? 'image/jpeg';
+
+    return ['data' => $data, 'mime' => $mime];
 }
 
 if ($action == 'add' && isset($_POST['submit_add'])) {
     $name = mysqli_real_escape_string($conn, $_POST['name']);
     $description = mysqli_real_escape_string($conn, $_POST['description']);
     $price = floatval($_POST['price']);
+    $category = mysqli_real_escape_string($conn, $_POST['category'] ?? 'mixed');
     
     error_log("ADD PRODUCT: name=$name, price=$price");
     error_log("ADD PRODUCT: FILES = " . print_r($_FILES, true));
     
-    $sql = "INSERT INTO products (name, description, price) VALUES ('$name', '$description', '$price')";
+    $sql = "INSERT INTO products (name, description, price, category) VALUES ('$name', '$description', '$price', '$category')";
     
     if ($conn->query($sql) === TRUE) {
         $product_id = $conn->insert_id;
@@ -58,10 +53,15 @@ if ($action == 'add' && isset($_POST['submit_add'])) {
         
         if (isset($_FILES['image']) && $_FILES['image']['error'] == 0 && $_FILES['image']['size'] > 0) {
             error_log("ADD PRODUCT: пробуем загрузить изображение");
-            $image_name = uploadImage($_FILES['image'], $product_id);
-            if ($image_name) {
-                $conn->query("UPDATE products SET image = '$image_name' WHERE id = $product_id");
-                error_log("ADD PRODUCT: изображение сохранено как $image_name");
+            $img = saveImageToDB($_FILES['image']);
+            if ($img) {
+                $null = null;
+                $stmt = $conn->prepare("UPDATE products SET image_data = ?, image_mime = ? WHERE id = ?");
+                $stmt->bind_param('bsi', $null, $img['mime'], $product_id);
+                $stmt->send_long_data(0, $img['data']);
+                $stmt->execute();
+                $stmt->close();
+                error_log("ADD PRODUCT: изображение сохранено в БД");
             } else {
                 error_log("ADD PRODUCT: загрузка изображения не удалась");
             }
@@ -81,21 +81,20 @@ if ($action == 'edit' && isset($_POST['submit_edit'])) {
     $name = mysqli_real_escape_string($conn, $_POST['name']);
     $description = mysqli_real_escape_string($conn, $_POST['description']);
     $price = floatval($_POST['price']);
+    $category = mysqli_real_escape_string($conn, $_POST['category'] ?? 'mixed');
     
-    $sql = "UPDATE products SET name='$name', description='$description', price='$price' WHERE id=$id";
+    $sql = "UPDATE products SET name='$name', description='$description', price='$price', category='$category' WHERE id=$id";
     
     if ($conn->query($sql) === TRUE) {
         if (isset($_FILES['image']) && $_FILES['image']['error'] == 0 && $_FILES['image']['size'] > 0) {
-            $old_result = $conn->query("SELECT image FROM products WHERE id = $id");
-            $old_row = $old_result->fetch_assoc();
-            
-            if ($old_row['image'] && file_exists("img/" . $old_row['image'])) {
-                unlink("img/" . $old_row['image']);
-            }
-            
-            $image_name = uploadImage($_FILES['image'], $id);
-            if ($image_name) {
-                $conn->query("UPDATE products SET image = '$image_name' WHERE id = $id");
+            $img = saveImageToDB($_FILES['image']);
+            if ($img) {
+                $null = null;
+                $stmt = $conn->prepare("UPDATE products SET image_data = ?, image_mime = ? WHERE id = ?");
+                $stmt->bind_param('bsi', $null, $img['mime'], $id);
+                $stmt->send_long_data(0, $img['data']);
+                $stmt->execute();
+                $stmt->close();
             }
         }
         
@@ -108,14 +107,6 @@ if ($action == 'edit' && isset($_POST['submit_edit'])) {
 
 if ($action == 'delete' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
-    
-    $result = $conn->query("SELECT image FROM products WHERE id = $id");
-    if ($result && $row = $result->fetch_assoc()) {
-        if ($row['image'] && file_exists("img/" . $row['image'])) {
-            unlink("img/" . $row['image']);
-        }
-    }
-    
     $conn->query("DELETE FROM products WHERE id=$id");
     header('Location: tovar_uprav.php?success=deleted');
     exit;
@@ -134,7 +125,7 @@ if ($action == 'edit' && isset($_GET['id']) && !isset($_POST['submit_edit'])) {
 }
 
 $products = [];
-$result = $conn->query("SELECT * FROM products ORDER BY id DESC");
+$result = $conn->query("SELECT id, name, description, price, category, image, image_mime, IF(image_data IS NOT NULL, 1, 0) as has_image FROM products ORDER BY id DESC");
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         $products[] = $row;
@@ -196,6 +187,7 @@ if (isset($_GET['success'])) {
             background: #677964;
             color: white;
             padding: 20px;
+            margin-top: 80px;
             border-radius: 10px;
             margin-bottom: 20px;
             display: flex;
@@ -339,6 +331,7 @@ if (isset($_GET['success'])) {
         
         .btn-add {
             background: #677964;
+            padding: 12px;
         }
         
         .btn-edit {
@@ -357,6 +350,8 @@ if (isset($_GET['success'])) {
         
         .cancel-btn {
             background: #6c757d;
+            padding: 12px;
+
         }
         
         .action-buttons {
@@ -426,8 +421,8 @@ if (isset($_GET['success'])) {
         .button-group {
             margin-top: 30px;
             display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
         }
         
         .empty-state {
@@ -614,6 +609,21 @@ if (isset($_GET['success'])) {
                                 </div>
                                 
                                 <div class="form-group">
+                                    <label>Категория:</label>
+                                    <select name="category" required style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 16px; background: white;">
+                                        <option value="roses">Розы</option>
+                                        <option value="tulips">Тюльпаны</option>
+                                        <option value="peonies">Пионы</option>
+                                        <option value="hydrangeas">Гортензии</option>
+                                        <option value="lilies">Лилии</option>
+                                        <option value="carnations">Гвоздики</option>
+                                        <option value="chrysanthemums">Хризантемы</option>
+                                        <option value="mimosa">Мимоза</option>
+                                        <option value="mixed">Сборные</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
                                     <label>Фото товара:</label>
                                     <input type="file" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
                                     <small style="color: #666; display: block; margin-top: 5px;">Поддерживаемые форматы: JPG, PNG, GIF, WEBP</small>
@@ -621,7 +631,7 @@ if (isset($_GET['success'])) {
                                 
                                 <div class="button-group">
                                     <button type="submit" name="submit_add" class="btn btn-add">Сохранить товар</button>
-                                    <a href="tovar_uprav.php" class="btn cancel-btn">Отмена</a>
+                                    <button onclick="window.location.href='tovar_uprav.php'"  class="btn cancel-btn">Отмена</button>
                                 </div>
                             </form>
                         </div>
@@ -651,15 +661,30 @@ if (isset($_GET['success'])) {
                                 </div>
                                 
                                 <div class="form-group">
+                                    <label>Категория:</label>
+                                    <select name="category" required style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 16px; background: white;">
+                                        <option value="roses" <?= ($product['category'] ?? 'mixed') == 'roses' ? 'selected' : '' ?>>Розы</option>
+                                        <option value="tulips" <?= ($product['category'] ?? 'mixed') == 'tulips' ? 'selected' : '' ?>>Тюльпаны</option>
+                                        <option value="peonies" <?= ($product['category'] ?? 'mixed') == 'peonies' ? 'selected' : '' ?>>Пионы</option>
+                                        <option value="hydrangeas" <?= ($product['category'] ?? 'mixed') == 'hydrangeas' ? 'selected' : '' ?>>Гортензии</option>
+                                        <option value="lilies" <?= ($product['category'] ?? 'mixed') == 'lilies' ? 'selected' : '' ?>>Лилии</option>
+                                        <option value="carnations" <?= ($product['category'] ?? 'mixed') == 'carnations' ? 'selected' : '' ?>>Гвоздики</option>
+                                        <option value="chrysanthemums" <?= ($product['category'] ?? 'mixed') == 'chrysanthemums' ? 'selected' : '' ?>>Хризантемы</option>
+                                        <option value="mimosa" <?= ($product['category'] ?? 'mixed') == 'mimosa' ? 'selected' : '' ?>>Мимоза</option>
+                                        <option value="mixed" <?= ($product['category'] ?? 'mixed') == 'mixed' ? 'selected' : '' ?>>Сборные</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
                                     <label>Текущее фото:</label>
                                     <div class="current-image">
                                         <?php 
-                                        $current_img = $product['image'];
-                                        $img_src = !empty($current_img) ? "img/" . htmlspecialchars($current_img) : "img/placeholder.jpg";
+                                        $has_data = !empty($product['image_data']);
+                                        $img_src = $has_data ? "img_out.php?id=" . $product['id'] : "img/placeholder.jpg";
                                         ?>
                                         <img src="<?= $img_src ?>" 
                                              alt="<?= htmlspecialchars($product['name']) ?>">
-                                        <span><?= htmlspecialchars($current_img) ?></span>
+                                        <span><?= $has_data ? 'в БД' : htmlspecialchars($product['image'] ?? '') ?></span>
                                     </div>
                                 </div>
                                 
@@ -693,33 +718,48 @@ if (isset($_GET['success'])) {
                                         <th>ID</th>
                                         <th>Фото</th>
                                         <th>Название</th>
-                                        <th>Описание</th>
+                                        <th>Категория</th>
                                         <th>Цена</th>
                                         <th>Действия</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($products as $item): ?>
+                                    <?php 
+                                    $catLabels = [
+                                        'roses' => 'Розы',
+                                        'tulips' => 'Тюльпаны',
+                                        'peonies' => 'Пионы',
+                                        'hydrangeas' => 'Гортензии',
+                                        'lilies' => 'Лилии',
+                                        'carnations' => 'Гвоздики',
+                                        'chrysanthemums' => 'Хризантемы',
+                                        'mimosa' => 'Мимоза',
+                                        'mixed' => 'Сборные',
+                                    ];
+                                    foreach ($products as $item): 
+                                        $catSlug = $item['category'] ?? 'mixed';
+                                    ?>
                                         <tr>
                                             <td><strong>#<?= $item['id'] ?></strong></td>
                                             <td>
                                                 <?php 
-                                                $img = $item['image'];
-                                                $img_src = !empty($img) ? "img/" . htmlspecialchars($img) : "img/placeholder.jpg";
+                                                $has_data = !empty($item['has_image']);
+                                                $img_src = $has_data ? "img_out.php?id=" . $item['id'] : (($item['image'] ?? false) ? "img/" . htmlspecialchars($item['image']) : "img/placeholder.jpg");
                                                 ?>
                                                 <img src="<?= $img_src ?>" 
                                                      alt="<?= htmlspecialchars($item['name']) ?>"
                                                      class="product-image">
                                             </td>
                                             <td><strong><?= htmlspecialchars($item['name']) ?></strong></td>
-                                            <td><?= htmlspecialchars(mb_substr($item['description'], 0, 50)) ?><?= strlen($item['description']) > 50 ? '...' : '' ?></td>
+                                            <td><?= htmlspecialchars($catLabels[$catSlug] ?? $catSlug) ?></td>
                                             <td class="price"><?= number_format($item['price'], 0, '', ' ') ?> ₽</td>
                                             <td class="action-buttons">
                                                 <a href="tovar_uprav.php?action=edit&id=<?= $item['id'] ?>" 
                                                    class="btn btn-small btn-edit">Изменить</a>
                                                 <a href="tovar_uprav.php?action=delete&id=<?= $item['id'] ?>" 
                                                    class="btn btn-small btn-delete"
-                                                   onclick="return confirm('Удалить товар &quot;<?= htmlspecialchars($item['name']) ?>&quot;?')">Удалить</a>
+                                                   onclick="return confirm('Удалить товар &quot;<?= htmlspecialchars($item['name']) ?>&quot;?')">Удалить
+                                                </a>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>

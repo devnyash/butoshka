@@ -3,7 +3,7 @@ require_once('db.php');
 session_start();
 
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
-    header('Location: avtoris.php');
+    header('Location: index.php?auth=login');
     exit;
 }
 
@@ -75,6 +75,7 @@ function getStatusClass($status) {
             color: white;
             padding: 20px;
             border-radius: 10px;
+            margin-top: 80px;
             margin-bottom: 20px;
             display: flex;
             align-items: center;
