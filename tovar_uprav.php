@@ -678,7 +678,7 @@ if (isset($_GET['success'])) {
                                     <label>Текущее фото:</label>
                                     <div class="current-image">
                                         <?php $has_image = !empty($product['image_data']); ?>
-                                        <img src="img_out.php?id=<?= $product['id'] ?>" 
+                                        <img src="img_out.php?id=<?= $product['id'] ?>&t=<?= time() ?>" 
                                              alt="<?= htmlspecialchars($product['name']) ?>">
                                         <span><?= $has_image ? 'в БД' : 'нет фото' ?></span>
                                     </div>
@@ -738,7 +738,7 @@ if (isset($_GET['success'])) {
                                         <tr>
                                             <td><strong>#<?= $item['id'] ?></strong></td>
                                             <td>
-                                                <img src="img_out.php?id=<?= $item['id'] ?>" 
+                                                <img src="img_out.php?id=<?= $item['id'] ?>&t=<?= time() ?>" 
                                                      alt="<?= htmlspecialchars($item['name']) ?>"
                                                      class="product-image">
                                             </td>
